@@ -54,3 +54,5 @@ coverage.xml
 
 # Screenshots (large PNGs, committed manually)
 screenshots/*.png
+
+frontend/test_downloads/
