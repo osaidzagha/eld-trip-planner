@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #0a0a0a;
+  color: #f3f4f6;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Custom Marker Styling */
+.custom-map-marker {
+  background: transparent;
+  border: none;
+}
+
+.custom-popup .leaflet-popup-content-wrapper {
+  background: #ffffff;
+  color: #111827;
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.custom-popup .leaflet-popup-tip {
+  background: #ffffff;
+}
+
+/* Print CSS: Clean single-page output per daily log sheet */
+@media print {
+  body {
+    background-color: #ffffff;
+    color: #000000;
+  }
+  header, .dev-toolbar, button, details, nav {
+    display: none !important;
+  }
+  .log-sheet-container {
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+}

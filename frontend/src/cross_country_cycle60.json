@@ -1,0 +1,639 @@
+{
+  "route": {
+    "total_miles": 2500.0,
+    "total_drive_hours": 41.5,
+    "legs": [
+      {
+        "name": "Current to Pickup",
+        "distance_miles": 150.0,
+        "duration_hours": 2.5,
+        "start_coords": [
+          34.05,
+          -118.25
+        ],
+        "end_coords": [
+          34.89,
+          -117.02
+        ]
+      },
+      {
+        "name": "Pickup to Dropoff",
+        "distance_miles": 2350.0,
+        "duration_hours": 39.0,
+        "start_coords": [
+          34.89,
+          -117.02
+        ],
+        "end_coords": [
+          33.74,
+          -84.38
+        ]
+      }
+    ],
+    "geojson": {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -118.25,
+            34.05
+          ],
+          [
+            -117.02,
+            34.89
+          ],
+          [
+            -84.38,
+            33.74
+          ]
+        ]
+      }
+    }
+  },
+  "timezone": "America/Los_Angeles",
+  "stops": [
+    {
+      "type": "pickup",
+      "lat": 34.89,
+      "lng": -117.02,
+      "eta_start": "2026-10-12T09:30:00",
+      "eta_end": "2026-10-12T10:30:00",
+      "duration_hrs": 1.0,
+      "label": "Barstow, CA",
+      "reason": "pickup"
+    },
+    {
+      "type": "restart",
+      "lat": 35.1,
+      "lng": -110.5,
+      "eta_start": "2026-10-12T17:00:00",
+      "eta_end": "2026-10-14T03:00:00",
+      "duration_hrs": 34.0,
+      "label": "Winslow, AZ",
+      "reason": "34-hr restart"
+    },
+    {
+      "type": "fuel",
+      "lat": 35.2,
+      "lng": -101.8,
+      "eta_start": "2026-10-14T10:36:00",
+      "eta_end": "2026-10-14T11:06:00",
+      "duration_hrs": 0.5,
+      "label": "Amarillo, TX",
+      "reason": "fuel"
+    },
+    {
+      "type": "rest",
+      "lat": 35.4,
+      "lng": -97.5,
+      "eta_start": "2026-10-14T14:30:00",
+      "eta_end": "2026-10-15T00:30:00",
+      "duration_hrs": 10.0,
+      "label": "Oklahoma City, OK",
+      "reason": "10-hr rest"
+    },
+    {
+      "type": "break",
+      "lat": 35.0,
+      "lng": -89.9,
+      "eta_start": "2026-10-15T08:30:00",
+      "eta_end": "2026-10-15T09:00:00",
+      "duration_hrs": 0.5,
+      "label": "Memphis, TN",
+      "reason": "30-min break"
+    },
+    {
+      "type": "rest",
+      "lat": 34.5,
+      "lng": -86.5,
+      "eta_start": "2026-10-15T12:00:00",
+      "eta_end": "2026-10-15T22:00:00",
+      "duration_hrs": 10.0,
+      "label": "Huntsville, AL",
+      "reason": "10-hr rest"
+    },
+    {
+      "type": "fuel",
+      "lat": 34.0,
+      "lng": -85.5,
+      "eta_start": "2026-10-16T00:12:00",
+      "eta_end": "2026-10-16T00:42:00",
+      "duration_hrs": 0.5,
+      "label": "Rome, GA",
+      "reason": "fuel"
+    },
+    {
+      "type": "break",
+      "lat": 33.8,
+      "lng": -84.8,
+      "eta_start": "2026-10-16T08:42:00",
+      "eta_end": "2026-10-16T09:12:00",
+      "duration_hrs": 0.5,
+      "label": "Dallas, GA",
+      "reason": "30-min break"
+    },
+    {
+      "type": "dropoff",
+      "lat": 33.74,
+      "lng": -84.38,
+      "eta_start": "2026-10-16T09:30:00",
+      "eta_end": "2026-10-16T10:30:00",
+      "duration_hrs": 1.0,
+      "label": "Atlanta, GA",
+      "reason": "dropoff"
+    }
+  ],
+  "daily_logs": [
+    {
+      "date": "2026-10-12",
+      "segments": [
+        {
+          "status": "OFF_DUTY",
+          "start": "2026-10-12T00:00:00",
+          "end": "2026-10-12T07:00:00",
+          "duration_hours": 7.0,
+          "original_duration_hours": 7.0,
+          "event_id": null,
+          "location_label": "Driving towards Barstow, CA",
+          "miles": 0.0,
+          "reason": "off-duty prior to shift",
+          "start_coordinates": null,
+          "end_coordinates": null
+        },
+        {
+          "status": "DRIVING",
+          "start": "2026-10-12T07:00:00",
+          "end": "2026-10-12T09:30:00",
+          "duration_hours": 2.5,
+          "original_duration_hours": 2.5,
+          "event_id": "evt_0",
+          "location_label": "Driving towards Barstow, CA",
+          "miles": 150.0,
+          "reason": "driving",
+          "start_coordinates": [
+            34.05,
+            -118.25
+          ],
+          "end_coordinates": [
+            34.89,
+            -117.02
+          ]
+        },
+        {
+          "status": "ON_DUTY_NOT_DRIVING",
+          "start": "2026-10-12T09:30:00",
+          "end": "2026-10-12T10:30:00",
+          "duration_hours": 1.0,
+          "original_duration_hours": 1.0,
+          "event_id": "evt_1",
+          "location_label": "Barstow, CA",
+          "miles": 0.0,
+          "reason": "pickup",
+          "start_coordinates": [
+            34.89,
+            -117.02
+          ],
+          "end_coordinates": [
+            34.89,
+            -117.02
+          ]
+        },
+        {
+          "status": "DRIVING",
+          "start": "2026-10-12T10:30:00",
+          "end": "2026-10-12T17:00:00",
+          "duration_hours": 6.5,
+          "original_duration_hours": 6.5,
+          "event_id": "evt_2",
+          "location_label": "Driving towards Atlanta, GA",
+          "miles": 391.67,
+          "reason": "driving",
+          "start_coordinates": [
+            34.89,
+            -117.02
+          ],
+          "end_coordinates": [
+            34.69833333333333,
+            -111.58
+          ]
+        },
+        {
+          "status": "OFF_DUTY",
+          "start": "2026-10-12T17:00:00",
+          "end": "2026-10-13T00:00:00",
+          "duration_hours": 7.0,
+          "original_duration_hours": 34.0,
+          "event_id": "evt_3",
+          "location_label": "Rest Area / Truck Stop (En route Pickup to Dropoff)",
+          "miles": 0.0,
+          "reason": "34-hr restart",
+          "start_coordinates": null,
+          "end_coordinates": null
+        }
+      ],
+      "hours_per_status": {
+        "OFF_DUTY": 14.0,
+        "SLEEPER": 0.0,
+        "DRIVING": 9.0,
+        "ON_DUTY_NOT_DRIVING": 1.0
+      },
+      "total_hours": 24.0,
+      "miles_driving_today": 541.67,
+      "total_mileage_today": 541.67,
+      "recap": {
+        "on_duty_today": 10.0,
+        "cycle_used_total": 0.0,
+        "available_tomorrow": 70.0
+      },
+      "from_city": "Los Angeles, CA",
+      "to_city": "Winslow, AZ"
+    },
+    {
+      "date": "2026-10-13",
+      "segments": [
+        {
+          "status": "OFF_DUTY",
+          "start": "2026-10-13T00:00:00",
+          "end": "2026-10-14T00:00:00",
+          "duration_hours": 24.0,
+          "original_duration_hours": 34.0,
+          "event_id": "evt_3",
+          "location_label": "Rest Area / Truck Stop (En route Pickup to Dropoff)",
+          "miles": 0.0,
+          "reason": "34-hr restart",
+          "start_coordinates": null,
+          "end_coordinates": null
+        }
+      ],
+      "hours_per_status": {
+        "OFF_DUTY": 24.0,
+        "SLEEPER": 0.0,
+        "DRIVING": 0.0,
+        "ON_DUTY_NOT_DRIVING": 0.0
+      },
+      "total_hours": 24.0,
+      "miles_driving_today": 0.0,
+      "total_mileage_today": 0.0,
+      "recap": {
+        "on_duty_today": 0,
+        "cycle_used_total": 0.0,
+        "available_tomorrow": 70.0
+      },
+      "from_city": "Winslow, AZ",
+      "to_city": "Winslow, AZ"
+    },
+    {
+      "date": "2026-10-14",
+      "segments": [
+        {
+          "status": "OFF_DUTY",
+          "start": "2026-10-14T00:00:00",
+          "end": "2026-10-14T03:00:00",
+          "duration_hours": 3.0,
+          "original_duration_hours": 34.0,
+          "event_id": "evt_3",
+          "location_label": "Rest Area / Truck Stop (En route Pickup to Dropoff)",
+          "miles": 0.0,
+          "reason": "34-hr restart",
+          "start_coordinates": null,
+          "end_coordinates": null
+        },
+        {
+          "status": "DRIVING",
+          "start": "2026-10-14T03:00:00",
+          "end": "2026-10-14T10:36:22.978723",
+          "duration_hours": 7.6064,
+          "original_duration_hours": 7.6064,
+          "event_id": "evt_4",
+          "location_label": "Driving towards Atlanta, GA",
+          "miles": 458.33,
+          "reason": "driving",
+          "start_coordinates": [
+            34.69833333333333,
+            -111.58
+          ],
+          "end_coordinates": [
+            34.47404255319149,
+            -105.21404255319149
+          ]
+        },
+        {
+          "status": "ON_DUTY_NOT_DRIVING",
+          "start": "2026-10-14T10:36:22.978723",
+          "end": "2026-10-14T11:06:22.978723",
+          "duration_hours": 0.5,
+          "original_duration_hours": 0.5,
+          "event_id": "evt_5",
+          "location_label": "Fuel Station (Mile 1000)",
+          "miles": 0.0,
+          "reason": "fuel",
+          "start_coordinates": null,
+          "end_coordinates": null
+        },
+        {
+          "status": "DRIVING",
+          "start": "2026-10-14T11:06:22.978723",
+          "end": "2026-10-14T14:30:00",
+          "duration_hours": 3.3936,
+          "original_duration_hours": 3.3936,
+          "event_id": "evt_6",
+          "location_label": "Driving towards Atlanta, GA",
+          "miles": 204.49,
+          "reason": "driving",
+          "start_coordinates": [
+            34.47404255319149,
+            -105.21404255319149
+          ],
+          "end_coordinates": [
+            34.37397435897436,
+            -102.37384615384615
+          ]
+        },
+        {
+          "status": "SLEEPER",
+          "start": "2026-10-14T14:30:00",
+          "end": "2026-10-15T00:00:00",
+          "duration_hours": 9.5,
+          "original_duration_hours": 10.0,
+          "event_id": "evt_7",
+          "location_label": "Rest Area / Berth (En route Pickup to Dropoff)",
+          "miles": 0.0,
+          "reason": "10-hr rest",
+          "start_coordinates": null,
+          "end_coordinates": null
+        }
+      ],
+      "hours_per_status": {
+        "OFF_DUTY": 3.0,
+        "SLEEPER": 9.5,
+        "DRIVING": 11.0,
+        "ON_DUTY_NOT_DRIVING": 0.5
+      },
+      "total_hours": 24.0,
+      "miles_driving_today": 662.82,
+      "total_mileage_today": 662.82,
+      "recap": {
+        "on_duty_today": 11.5,
+        "cycle_used_total": 11.5,
+        "available_tomorrow": 58.5
+      },
+      "from_city": "Winslow, AZ",
+      "to_city": "Oklahoma City, OK"
+    },
+    {
+      "date": "2026-10-15",
+      "segments": [
+        {
+          "status": "SLEEPER",
+          "start": "2026-10-15T00:00:00",
+          "end": "2026-10-15T00:30:00",
+          "duration_hours": 0.5,
+          "original_duration_hours": 10.0,
+          "event_id": "evt_7",
+          "location_label": "Rest Area / Berth (En route Pickup to Dropoff)",
+          "miles": 0.0,
+          "reason": "10-hr rest",
+          "start_coordinates": null,
+          "end_coordinates": null
+        },
+        {
+          "status": "DRIVING",
+          "start": "2026-10-15T00:30:00",
+          "end": "2026-10-15T08:30:00",
+          "duration_hours": 8.0,
+          "original_duration_hours": 8.0,
+          "event_id": "evt_8",
+          "location_label": "Driving towards Atlanta, GA",
+          "miles": 482.05,
+          "reason": "driving",
+          "start_coordinates": [
+            34.37397435897436,
+            -102.37384615384615
+          ],
+          "end_coordinates": [
+            34.13807692307692,
+            -95.67846153846153
+          ]
+        },
+        {
+          "status": "OFF_DUTY",
+          "start": "2026-10-15T08:30:00",
+          "end": "2026-10-15T09:00:00",
+          "duration_hours": 0.5,
+          "original_duration_hours": 0.5,
+          "event_id": "evt_9",
+          "location_label": "Rest Stop (En route Pickup to Dropoff)",
+          "miles": 0.0,
+          "reason": "30-min break",
+          "start_coordinates": null,
+          "end_coordinates": null
+        },
+        {
+          "status": "DRIVING",
+          "start": "2026-10-15T09:00:00",
+          "end": "2026-10-15T12:00:00",
+          "duration_hours": 3.0,
+          "original_duration_hours": 3.0,
+          "event_id": "evt_10",
+          "location_label": "Driving towards Atlanta, GA",
+          "miles": 180.77,
+          "reason": "driving",
+          "start_coordinates": [
+            34.13807692307692,
+            -95.67846153846153
+          ],
+          "end_coordinates": [
+            34.049615384615386,
+            -93.1676923076923
+          ]
+        },
+        {
+          "status": "SLEEPER",
+          "start": "2026-10-15T12:00:00",
+          "end": "2026-10-15T22:00:00",
+          "duration_hours": 10.0,
+          "original_duration_hours": 10.0,
+          "event_id": "evt_11",
+          "location_label": "Rest Area / Berth (En route Pickup to Dropoff)",
+          "miles": 0.0,
+          "reason": "10-hr rest",
+          "start_coordinates": null,
+          "end_coordinates": null
+        },
+        {
+          "status": "DRIVING",
+          "start": "2026-10-15T22:00:00",
+          "end": "2026-10-16T00:00:00",
+          "duration_hours": 2.0,
+          "original_duration_hours": 2.2021,
+          "event_id": "evt_12",
+          "location_label": "Driving towards Atlanta, GA",
+          "miles": 120.51,
+          "reason": "driving",
+          "start_coordinates": [
+            34.049615384615386,
+            -93.1676923076923
+          ],
+          "end_coordinates": [
+            33.98468085106383,
+            -91.32468085106382
+          ]
+        }
+      ],
+      "hours_per_status": {
+        "OFF_DUTY": 0.5,
+        "SLEEPER": 10.5,
+        "DRIVING": 13.0,
+        "ON_DUTY_NOT_DRIVING": 0.0
+      },
+      "total_hours": 24.0,
+      "miles_driving_today": 783.33,
+      "total_mileage_today": 783.33,
+      "recap": {
+        "on_duty_today": 13.0,
+        "cycle_used_total": 24.5,
+        "available_tomorrow": 45.5
+      },
+      "from_city": "Oklahoma City, OK",
+      "to_city": "Huntsville, AL"
+    },
+    {
+      "date": "2026-10-16",
+      "segments": [
+        {
+          "status": "DRIVING",
+          "start": "2026-10-16T00:00:00",
+          "end": "2026-10-16T00:12:07.659574",
+          "duration_hours": 0.2021,
+          "original_duration_hours": 2.2021,
+          "event_id": "evt_12",
+          "location_label": "Driving towards Atlanta, GA",
+          "miles": 12.18,
+          "reason": "driving",
+          "start_coordinates": [
+            34.049615384615386,
+            -93.1676923076923
+          ],
+          "end_coordinates": [
+            33.98468085106383,
+            -91.32468085106382
+          ]
+        },
+        {
+          "status": "ON_DUTY_NOT_DRIVING",
+          "start": "2026-10-16T00:12:07.659574",
+          "end": "2026-10-16T00:42:07.659574",
+          "duration_hours": 0.5,
+          "original_duration_hours": 0.5,
+          "event_id": "evt_13",
+          "location_label": "Fuel Station (Mile 2000)",
+          "miles": 0.0,
+          "reason": "fuel",
+          "start_coordinates": null,
+          "end_coordinates": null
+        },
+        {
+          "status": "DRIVING",
+          "start": "2026-10-16T00:42:07.659574",
+          "end": "2026-10-16T08:42:07.659574",
+          "duration_hours": 8.0,
+          "original_duration_hours": 8.0,
+          "event_id": "evt_14",
+          "location_label": "Driving towards Atlanta, GA",
+          "miles": 482.05,
+          "reason": "driving",
+          "start_coordinates": [
+            33.98468085106383,
+            -91.32468085106382
+          ],
+          "end_coordinates": [
+            33.74878341516639,
+            -84.6292962356792
+          ]
+        },
+        {
+          "status": "OFF_DUTY",
+          "start": "2026-10-16T08:42:07.659574",
+          "end": "2026-10-16T09:12:07.659574",
+          "duration_hours": 0.5,
+          "original_duration_hours": 0.5,
+          "event_id": "evt_15",
+          "location_label": "Rest Stop (En route Pickup to Dropoff)",
+          "miles": 0.0,
+          "reason": "30-min break",
+          "start_coordinates": null,
+          "end_coordinates": null
+        },
+        {
+          "status": "DRIVING",
+          "start": "2026-10-16T09:12:07.659574",
+          "end": "2026-10-16T09:30:00",
+          "duration_hours": 0.2979,
+          "original_duration_hours": 0.2979,
+          "event_id": "evt_16",
+          "location_label": "Driving towards Atlanta, GA",
+          "miles": 17.95,
+          "reason": "driving",
+          "start_coordinates": [
+            33.74878341516639,
+            -84.6292962356792
+          ],
+          "end_coordinates": [
+            33.74,
+            -84.38
+          ]
+        },
+        {
+          "status": "ON_DUTY_NOT_DRIVING",
+          "start": "2026-10-16T09:30:00",
+          "end": "2026-10-16T10:30:00",
+          "duration_hours": 1.0,
+          "original_duration_hours": 1.0,
+          "event_id": "evt_17",
+          "location_label": "Atlanta, GA",
+          "miles": 0.0,
+          "reason": "dropoff",
+          "start_coordinates": [
+            33.74,
+            -84.38
+          ],
+          "end_coordinates": [
+            33.74,
+            -84.38
+          ]
+        },
+        {
+          "status": "OFF_DUTY",
+          "start": "2026-10-16T10:30:00",
+          "end": "2026-10-17T00:00:00",
+          "duration_hours": 13.5,
+          "original_duration_hours": 13.5,
+          "event_id": null,
+          "location_label": "Atlanta, GA",
+          "miles": 0.0,
+          "reason": "off-duty after shift",
+          "start_coordinates": null,
+          "end_coordinates": null
+        }
+      ],
+      "hours_per_status": {
+        "OFF_DUTY": 14.0,
+        "SLEEPER": 0.0,
+        "DRIVING": 8.5,
+        "ON_DUTY_NOT_DRIVING": 1.5
+      },
+      "total_hours": 24.0,
+      "miles_driving_today": 512.18,
+      "total_mileage_today": 512.18,
+      "recap": {
+        "on_duty_today": 10.0,
+        "cycle_used_total": 34.5,
+        "available_tomorrow": 35.5
+      },
+      "from_city": "Huntsville, AL",
+      "to_city": "Atlanta, GA"
+    }
+  ],
+  "assumptions": []
+}
