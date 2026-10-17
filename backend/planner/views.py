@@ -194,7 +194,7 @@ class PlanTripView(APIView):
 
         # Reverse geocode stops with an 8-second total budget
         rev_geo_start_time = time.time()
-        rev_geo_budget_seconds = 8.0
+        rev_geo_budget_seconds = 15.0
 
         for seg in raw_segments:
             if seg.status == "DRIVING":
@@ -250,6 +250,26 @@ class PlanTripView(APIView):
 
 
 
+        # Re-label every log segment with where the truck IS when the segment starts
+        def _short_place(label):
+            parts = [p.strip() for p in (label or "").split(",") if p.strip()]
+            return f"{parts[0]}, {parts[-2]}" if len(parts) > 2 else ", ".join(parts)
+
+        stop_by_start = {s["eta_start"]: s["label"] for s in stops}
+        place = _short_place(current.get("label", "Origin")) or "Origin"
+        raw_places = []
+        for seg in raw_segments:
+            if seg.status != "DRIVING":
+                place = _short_place(stop_by_start.get(seg.start.isoformat())) or place
+            raw_places.append((seg.start, seg.end, place))
+        for dlog in daily_logs:
+            for s in dlog.segments:
+                for a, b, name in raw_places:
+                    if a <= s.start < b:
+                        s.location_label = name
+                        break
+                else:
+                    s.location_label = raw_places[0][2] if s.start <= raw_places[0][0] else raw_places[-1][2]
         # Assign accurate from_city and to_city to each daily log
         # Day 1 starts at current location; subsequent days start at previous day's ending location
         prev_location = current.get("label", "Current Location").split(",")[0] + ", " + current.get("label", "").split(",")[-1].strip() if "," in current.get("label", "") else current.get("label", "Origin")

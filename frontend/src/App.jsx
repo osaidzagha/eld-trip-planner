@@ -25,7 +25,7 @@ export default function App() {
   const activeDevFixture = devFixtureKey === 'chicago' ? chicagoFixture : crossCountryFixture;
 
   // Cold-start helper: show "waking up" message after 5 s of loading
-  const [showWakeUpMsg, setShowWakeUpMsg] = React.useRef(null) && React.useRef(null);
+  const [showWakeUp, setShowWakeUp] = useState(false);
   const wakeUpTimerRef = React.useRef(null);
 
   // Handle Trip Planning Request
@@ -91,7 +91,7 @@ export default function App() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-extrabold tracking-tight text-white">
-                  Antigravity ELD Trip Planner
+                  ELD Trip Planner
                 </h1>
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                   FMCSA 49 CFR § 395
@@ -116,6 +116,7 @@ export default function App() {
               <Map className="w-3.5 h-3.5" />
               <span>Full Trip Planner</span>
             </button>
+            {import.meta.env.DEV && (
             <button
               onClick={() => setActiveTab('dev_logs')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition ${
@@ -127,6 +128,7 @@ export default function App() {
               <FileText className="w-3.5 h-3.5" />
               <span>Log Sheets Dev View</span>
             </button>
+            )}
           </div>
         </div>
       </header>
@@ -161,6 +163,21 @@ export default function App() {
                   isLoading={isLoading}
                   formErrors={formErrors}
                 />
+                {isLoading && showWakeUp && (
+                  <div className="bg-amber-950 border border-amber-800 text-amber-200 rounded-xl p-3 text-xs">
+                    Server is waking up, this can take up to a minute. Please keep this tab open.
+                  </div>
+                )}
+                {isLoading && showWakeUp && (
+                  <div className="bg-amber-950 border border-amber-800 text-amber-200 rounded-xl p-3 text-xs">
+                    Server is waking up, this can take up to a minute. Please keep this tab open.
+                  </div>
+                )}
+                {isLoading && showWakeUp && (
+                  <div className="bg-amber-950 border border-amber-800 text-amber-200 rounded-xl p-3 text-xs">
+                    Server is waking up, this can take up to a minute. Please keep this tab open.
+                  </div>
+                )}
                 <AssumptionsPanel assumptions={planResult?.assumptions} />
               </div>
 

@@ -115,7 +115,7 @@ def reverse_geocode_location(lat: float, lng: float, timeout: float = 2.5) -> Op
         "lat": lat,
         "lon": lng,
         "format": "jsonv2",
-        "zoom": 10,
+        "zoom": 12,
         "addressdetails": 1,
     }
 
@@ -129,16 +129,14 @@ def reverse_geocode_location(lat: float, lng: float, timeout: float = 2.5) -> Op
                 or address.get("town")
                 or address.get("village")
                 or address.get("municipality")
-                or address.get("county")
+                or address.get("hamlet")
+                or address.get("suburb")
                 or ""
             )
-            state = address.get("state") or address.get("state_code") or ""
-            # Extract state abbreviation if standard 2-letter
-            state_code = address.get("state_code")
-            if not state_code and len(state) == 2:
-                state_code = state.upper()
-
-            label_st = state_code or state
+            if not city and address.get("county"):
+                city = address["county"].replace(" County", " Co.")
+            iso = address.get("ISO3166-2-lvl4") or ""
+            label_st = iso.split("-")[-1] if iso.startswith("US-") else (address.get("state_code") or address.get("state") or "")
             if city and label_st:
                 result = f"{city}, {label_st}"
             elif city:

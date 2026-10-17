@@ -81,13 +81,13 @@ const createCustomIcon = (type, number) => {
 };
 
 // Component to dynamically fit route bounds whenever geojson changes
-function FitBounds({ bounds }) {
+function FitBounds({ bounds, sig }) {
   const map = useMap();
   useEffect(() => {
     if (bounds && bounds.isValid()) {
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
     }
-  }, [bounds, map]);
+  }, [sig, map]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }
 
@@ -108,8 +108,10 @@ export default function MapView({ route, stops = [], selectedStop, onSelectStop 
 
   // Compute bounding box
   let bounds = null;
-  if (geojson && geojson.coordinates && geojson.coordinates.length > 0) {
-    const latLngs = geojson.coordinates.map((coord) => [coord[1], coord[0]]);
+  const coords = (geojson?.type === 'Feature' ? geojson.geometry?.coordinates : geojson?.coordinates) || [];
+  const routeSig = `${coords.length}-${coords[0]}-${coords[coords.length - 1]}`;
+  if (coords.length > 0) {
+    const latLngs = coords.map((coord) => [coord[1], coord[0]]);
     bounds = L.latLngBounds(latLngs);
   }
 
@@ -128,13 +130,13 @@ export default function MapView({ route, stops = [], selectedStop, onSelectStop 
         />
 
         {/* Fit Bounds Controller */}
-        {bounds && <FitBounds bounds={bounds} />}
+        {bounds && <FitBounds bounds={bounds} sig={routeSig} />}
         {selectedStop && <MapFlyController selectedStop={selectedStop} />}
 
         {/* Route Polyline GeoJSON */}
         {geojson && (
           <GeoJSON
-            key={JSON.stringify(geojson.coordinates ? geojson.coordinates[0] : null)}
+            key={routeSig}
             data={geojson}
             style={{
               color: '#2563EB',

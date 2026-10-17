@@ -38,7 +38,7 @@ export default function TripForm({ onPlanTrip, isLoading, formErrors }) {
     setPickup({ label: 'Dallas, TX', lat: 32.7767, lng: -96.797 });
     setDropoff({ label: 'Atlanta, GA', lat: 33.749, lng: -84.388 });
     setCycleUsedHrs(30.0);
-    setStartDatetime('2026-10-12T07:00');
+    setStartDatetime('');
   };
 
   const loadExample2 = () => {
@@ -46,7 +46,7 @@ export default function TripForm({ onPlanTrip, isLoading, formErrors }) {
     setPickup({ label: 'Barstow, CA', lat: 34.8958, lng: -117.0173 });
     setDropoff({ label: 'Atlanta, GA', lat: 33.749, lng: -84.388 });
     setCycleUsedHrs(60.0);
-    setStartDatetime('2026-10-12T07:00');
+    setStartDatetime('');
   };
 
   return (

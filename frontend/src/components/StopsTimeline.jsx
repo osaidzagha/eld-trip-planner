@@ -24,7 +24,8 @@ const formatTimeSpan = (start, end) => {
   const dStart = new Date(start);
   const dEnd = new Date(end);
   const startStr = dStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const endStr = dEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const endTime = dEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const endStr = dStart.toDateString() === dEnd.toDateString() ? endTime : `${dEnd.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${endTime}`;
   const dateStr = dStart.toLocaleDateString([], { month: 'short', day: 'numeric' });
   return { dateStr, timeRange: `${startStr} – ${endStr}` };
 };
