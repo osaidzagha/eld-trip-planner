@@ -8,8 +8,8 @@ A full-stack FMCSA-compliant ELD (Electronic Logging Device) trip planner built 
 
 | Service | URL |
 |---------|-----|
-| Frontend | `https://YOUR_APP.vercel.app` |
-| API | `https://YOUR_SERVICE.onrender.com` |
+| Frontend | `https://eld-trip-planner-xi-sable.vercel.app` |
+| API | `https://eld-trip-planner-api-gumw.onrender.com` |
 
 ---
 
@@ -49,7 +49,7 @@ A full-stack FMCSA-compliant ELD (Electronic Logging Device) trip planner built 
 ### 1 — Clone
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/eld-trip-planner.git
+git clone https://github.com/osaidzagha/eld-trip-planner.git
 cd eld-trip-planner
 ```
 
@@ -280,7 +280,7 @@ Every event is split at midnight in the **origin's home-terminal timezone** (res
 
 ### Frontend → Vercel
 
-1. In `frontend/vercel.json`, replace `YOUR_RENDER_SERVICE` with the actual Render URL.
+1. In your Vercel project settings, add the environment variable `VITE_API_URL` set to the Render service URL (no trailing slash) before the first build.
 2. On Vercel, **Add New Project** → import the GitHub repo.
 3. Set **Root Directory** to `frontend`.
 4. Build command: `npm run build`; Output directory: `dist`.
