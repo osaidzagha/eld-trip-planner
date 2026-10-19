@@ -1,6 +1,6 @@
 # ELD Trip Planner
 
-A full-stack FMCSA-compliant ELD (Electronic Logging Device) trip planner built with Django + React. Enter a current location, pickup, and dropoff; get a routed map, HOS-compliant stop schedule, and printable Driver's Daily Log sheets.
+A full-stack FMCSA-compliant ELD (Electronic Logging Device) trip planner built with Django REST Framework and React (Vite + Leaflet + Tailwind CSS). It takes a driver's current location, pickup destination, dropoff destination, and current cycle hours used; it calculates real-world turn-by-turn routes, schedules required HOS rest breaks and fuel stops, and dynamically renders compliant Driver's Daily Log sheets with PDF/PNG export.
 
 ---
 
@@ -8,362 +8,274 @@ A full-stack FMCSA-compliant ELD (Electronic Logging Device) trip planner built 
 
 | Service | URL |
 |---------|-----|
-| Frontend | `https://eld-trip-planner-xi-sable.vercel.app` |
-| API | `https://eld-trip-planner-api-gumw.onrender.com` |
+| **Frontend Application** | [https://eld-trip-planner-xi-sable.vercel.app](https://eld-trip-planner-xi-sable.vercel.app) |
+| **Backend REST API** | [https://eld-trip-planner-api-gumw.onrender.com](https://eld-trip-planner-api-gumw.onrender.com) |
+| **GitHub Repository** | [https://github.com/osaidzagha/eld-trip-planner](https://github.com/osaidzagha/eld-trip-planner) |
+
+---
+
+## Visual Overview
+
+### Trip Planner & Interactive Route Scheduling
+![Trip Planner Desktop Overview](docs/screenshots/01_planner_desktop_overview.png)
+
+### FMCSA Vector Daily Log Sheet (Print & SVG Vector Grid)
+![FMCSA Driver's Daily Log Sheet](docs/screenshots/02_fmcsa_daily_log_day1.png)
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Browser (React + Vite)                                  │
-│  • TripForm ──→ POST /api/plan-trip/                     │
-│  • MapView (Leaflet + OSM tiles)                         │
-│  • StopsTimeline                                         │
-│  • LogViewer → LogSheet (pure SVG, print/PDF)            │
-└──────────────────────────┬──────────────────────────────┘
-                           │ HTTPS / JSON
-┌──────────────────────────▼──────────────────────────────┐
-│  Django REST API (Render / Gunicorn + WhiteNoise)        │
-│  • GET  /api/geocode/?q=      Nominatim autocomplete     │
-│  • POST /api/plan-trip/       Route + HOS + logs         │
-│    ├─ planner/services.py     Geocoding, routing cache   │
-│    ├─ hos_engine.py           Pure-Python HOS engine     │
-│    └─ timezonefinder          Origin TZ resolution       │
-└─────────────────────────────────────────────────────────┘
-         │ Nominatim API (geocoding)
-         │ OSRM public API  (routing, default)
-         │ OpenRouteService (routing, when ORS_API_KEY set)
+┌─────────────────────────────────────────────────────────────────┐
+│  Browser (React 19 + Vite 8 + Tailwind CSS v4)                  │
+│  • TripForm (Debounced geocoding search + presets)              │
+│  • MapView (Leaflet + OSM tiles + custom SVG markers)           │
+│  • StopsTimeline (Scheduled HOS rests, breaks, and fuel stops)  │
+│  • LogViewer → LogSheet (Pure SVG FMCSA 24h grid, PDF export)   │
+└────────────────────────────────┬────────────────────────────────┘
+                                 │ HTTPS / JSON
+┌────────────────────────────────▼────────────────────────────────┐
+│  Django 6 REST API (Render / Gunicorn + WhiteNoise)             │
+│  • GET  /api/health/          Zero-dependency health probe      │
+│  • GET  /api/geocode/?q=      Nominatim + Photon fallback       │
+│  • POST /api/plan-trip/       Full routing, HOS engine & logs   │
+│    ├─ planner/services.py     Geocoding, OSRM/ORS routing cache │
+│    ├─ hos_engine.py           Pure-Python HOS state machine     │
+│    └─ timezonefinder          Origin timezone auto-resolution   │
+└─────────────────────────────────────────────────────────────────┘
+         │ Nominatim / Photon API (geocoding & reverse geocoding)
+         │ OSRM public API (routing, default)
+         │ OpenRouteService (routing, when ORS_API_KEY is configured)
 ```
+
+---
+
+## HOS Rules Implemented
+
+Built strictly against the property-carrying driver regulations under **FMCSA 49 CFR Part 395**:
+
+| Rule | Limit | Reset / Trigger Condition |
+|------|-------|---------------------------|
+| **11-Hour Driving Limit** | Max 11 hours behind the wheel | Resets after 10 consecutive hours off duty (`SLEEPER`). |
+| **14-Hour Duty Window** | Driving prohibited after 14th consecutive hour from coming on duty | Resets after 10 consecutive hours off duty (`SLEEPER`). **Never pauses** for meal breaks or off-duty periods. |
+| **30-Minute Rest Break** | Mandatory after 8 cumulative hours of driving | Satisfied by any 30+ consecutive minutes of non-driving status (`ON_DUTY_NOT_DRIVING`, `OFF_DUTY`, or `SLEEPER`). Fuel stops and pickup/dropoff qualify. |
+| **70-Hour / 8-Day Cycle** | Driving prohibited once 70 cumulative on-duty hours are reached | Resets to 0.0 hours after a 34 consecutive hour restart (`OFF_DUTY`). |
+
+### Duty Statuses
+1. `OFF_DUTY`: Off duty time and 34-hour cycle restarts.
+2. `SLEEPER`: Mandatory 10-hour rest periods in sleeper berth.
+3. `DRIVING`: Behind the wheel on route legs.
+4. `ON_DUTY_NOT_DRIVING`: 1 hour at pickup, 1 hour at dropoff, and 30-minute fuel stops.
+
+### Assumptions & Business Logic
+1. **Fresh Shift at Start**: The driver starts the trip as a fresh shift with 10+ hours off duty prior to departure. The 11-hour driving and 14-hour duty clocks start at trip start.
+2. **Cycle Hours Roll-Off Simplification**: Cumulative on-duty hours accumulate monotonically from `cycle_used_hrs`. Hours from prior days do not roll off mid-trip (conservative safety simplification).
+3. **Fuel Stops**: A 30-minute `ON_DUTY_NOT_DRIVING` fuel stop is inserted at least once every 1,000 miles driven.
+4. **Pickup & Dropoff**: Exactly 1.0 hour `ON_DUTY_NOT_DRIVING` each. Trip order: Current Location -> Driving -> Pickup (1h) -> Driving -> Dropoff (1h).
+5. **Real-World Durations**: Driving distance and duration are fetched from OSRM/ORS turn-by-turn routing (no fixed-speed assumptions).
+6. **Timezone & Midnight Splitting**: Daily logs are sliced midnight-to-midnight in the origin terminal's local timezone (resolved via `timezonefinder`, falling back to UTC). Each calendar day's 4 status rows sum to exactly **24.00 hours**.
+
+---
+
+## Known Limitations
+
+- **Free-Tier Cold Starts**: Render free-tier web services spin down after 15 minutes of inactivity. Initial request may take ~50-60 seconds to wake up. The app fires a background health ping on mount and displays a waking status banner if requests take longer than 5 seconds.
+- **Shared Public Map APIs**: Public OSRM routing and Nominatim geocoding are free, rate-limited public endpoints (1 req/sec). Nominatim automatically fails over to Komoot Photon if rate-limited or blocked.
+- **Rural Reverse-Geocoding**: Stops in rural highway segments without incorporated municipality boundaries show county or mile marker labels (e.g., `Lonoke Co., AR`).
+- **8-Day Rolling Window**: As noted in assumptions, hours from day -8 are not subtracted as days advance.
 
 ---
 
 ## Local Setup
 
 ### Prerequisites
-
-- Python ≥ 3.12 (project pins 3.12.8 via `.python-version`)
+- Python ≥ 3.11 (tested on Python 3.12 and 3.14)
 - Node.js ≥ 20
 
-### 1 — Clone
-
+### 1 — Clone Repository
 ```bash
 git clone https://github.com/osaidzagha/eld-trip-planner.git
 cd eld-trip-planner
 ```
 
-### 2 — Backend
+### 2 — Backend Setup
 
-```bash
+#### Windows (PowerShell)
+```powershell
 cd backend
-
-# Create and activate virtualenv
 python -m venv venv
-# Windows:
 .\venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
 pip install -r requirements.txt
-
-# Run migrations (SQLite, only needed for Django admin)
 python manage.py migrate
 
-# Start dev server
+# Run dev server with DEBUG=1
+$env:DEBUG="1"
 python manage.py runserver 127.0.0.1:8000
 ```
 
-Optional environment variables (create `backend/.env` or export):
+#### macOS / Linux (Bash)
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SECRET_KEY` | insecure dev key | Django secret key — **change in production** |
-| `DEBUG` | `True` | Set `False` in production |
-| `ALLOWED_HOSTS` | `*` | Comma-separated hosts |
-| `CORS_ALLOW_ALL_ORIGINS` | `True` | Set `False` and use `CORS_ALLOWED_ORIGINS` in production |
-| `CORS_ALLOWED_ORIGINS` | _(unset)_ | Comma-separated allowed origins (e.g. Vercel URL) |
-| `CSRF_TRUSTED_ORIGINS` | _(unset)_ | Same as `CORS_ALLOWED_ORIGINS` for cookie safety |
-| `ORS_API_KEY` | _(unset)_ | OpenRouteService key; falls back to public OSRM when absent |
-| `OSRM_URL` | `https://router.project-osrm.org` | Custom OSRM endpoint |
+# Run dev server with DEBUG=1
+export DEBUG=1
+python manage.py runserver 127.0.0.1:8000
+```
 
-### 3 — Frontend
+### 3 — Frontend Setup
 
+#### Windows (PowerShell)
+```powershell
+cd frontend
+npm install
+
+# Optional: copy environment file
+cp .env.example .env
+
+# Run dev server (proxies /api to 127.0.0.1:8000)
+npm run dev
+```
+
+#### macOS / Linux (Bash)
 ```bash
 cd frontend
 npm install
-npm run dev          # → http://127.0.0.1:5173
-```
 
-The Vite dev server proxies `/api` → `http://127.0.0.1:8000` automatically.
+# Optional: copy environment file
+cp .env.example .env
+
+# Run dev server
+npm run dev
+```
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173) in your browser.
 
 ---
 
-## Running Tests
+## Environment Variables
 
-### Backend (pytest)
+### Render (Backend)
+Configured via `render.yaml` or Render Dashboard:
 
-```bash
-cd backend
-.\venv\Scripts\pytest -v       # Windows
-# or
-pytest -v                       # after activating venv
-```
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SECRET_KEY` | **Yes** | Django secret key (Render auto-generates securely). Fails startup if missing in production. |
+| `DEBUG` | **Yes** | Set to `False` (or `0`). |
+| `ALLOWED_HOSTS` | **Yes** | Hostnames allowed, e.g. `.onrender.com,localhost,127.0.0.1`. |
+| `CORS_ALLOWED_ORIGINS` | **Yes** | Comma-separated list of allowed frontend origins (e.g. `https://eld-trip-planner-xi-sable.vercel.app`). Trailing slashes are stripped automatically. |
+| `CSRF_TRUSTED_ORIGINS` | **Yes** | Set to same value as `CORS_ALLOWED_ORIGINS`. |
+| `ORS_API_KEY` | Optional | OpenRouteService API key. If unset, engine defaults to public OSRM. |
 
-**21 tests — all must pass:**
+### Vercel (Frontend)
+Configured in Vercel Project Settings:
 
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_hos_engine.py` | 9 | HOS rules, midnight split, fuel stops, cycle restart |
-| `test_api.py` | 12 | Validation, routing mock, stop extraction, rev-geocode |
-
-### Frontend (Vitest)
-
-```bash
-cd frontend
-npx vitest run
-```
-
-**13 tests** in `src/utils/logGridGeometry.test.js` covering grid geometry, duty path, remarks, fixture invariants.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_API_URL` | **Yes** | Base URL of deployed Render backend service (e.g. `https://eld-trip-planner-api-gumw.onrender.com`). No trailing slash. |
 
 ---
 
 ## API Reference
 
+### `GET /api/health/`
+Zero-dependency liveness probe used for monitoring and warm-up pings.
+- **Response**: `200 OK`
+```json
+{ "status": "ok" }
+```
+
 ### `GET /api/geocode/?q=<query>`
-
-Nominatim-backed address autocomplete. Returns up to 5 candidates.
-
-**Response** `200 OK`:
+Autocomplete location search with Nominatim and automatic Photon fallback.
+- **Query Params**: `q` (string, required)
+- **Response**: `200 OK`
 ```json
 [
-  { "label": "Chicago, Illinois, United States", "lat": 41.8781, "lng": -87.6298 },
-  ...
+  { "label": "Dallas, Dallas County, Texas, United States", "lat": 32.7763, "lng": -96.7969 }
 ]
 ```
 
----
-
 ### `POST /api/plan-trip/`
-
-Plans a complete ELD trip: routing → HOS simulation → stop schedule → daily log sheets.
-
-**Request body:**
+Plans complete route, HOS schedule, stop waypoints, and 24h daily log sheets.
+- **Request Body**:
 ```json
 {
-  "current":  { "label": "Chicago, IL",  "lat": 41.8781, "lng": -87.6298 },
-  "pickup":   { "label": "Dallas, TX",   "lat": 32.7767, "lng": -96.7970 },
-  "dropoff":  { "label": "Atlanta, GA",  "lat": 33.7490, "lng": -84.3880 },
-  "cycle_used_hrs": 30,
-  "start_datetime": "2024-11-15T08:00:00"   // Optional; ISO 8601. Defaults to now rounded up 15 min.
+  "current": { "label": "Chicago, IL", "lat": 41.8781, "lng": -87.6298 },
+  "pickup": { "label": "Dallas, TX", "lat": 32.7767, "lng": -96.7970 },
+  "dropoff": { "label": "Atlanta, GA", "lat": 33.7490, "lng": -84.3880 },
+  "cycle_used_hrs": 30.0,
+  "start_datetime": "2026-10-18T08:00:00"
 }
 ```
-
-All three location objects require `lat` and `lng`; `label` is optional but displayed in the UI.  
-`cycle_used_hrs` must be between `0` and `70` (inclusive).
-
-**Response** `200 OK`:
+- **Response**: `200 OK`
 ```json
 {
   "route": {
-    "geojson": { "type": "LineString", "coordinates": [[lng, lat], ...] },
-    "total_miles": 967.4,
-    "total_drive_hours": 14.2,
-    "legs": [
-      {
-        "name": "Current to Pickup",
-        "distance_miles": 921.0,
-        "duration_hours": 13.5,
-        "start_coords": [41.878, -87.63],
-        "end_coords": [32.777, -96.797]
-      },
-      { ... }
-    ]
+    "total_miles": 1749.61,
+    "total_drive_hours": 31.25,
+    "legs": [...],
+    "geojson": { "type": "LineString", "coordinates": [...] }
   },
   "stops": [
     {
-      "type": "break|fuel|rest|restart|pickup|dropoff",
-      "lat": 37.12,
-      "lng": -94.34,
-      "eta_start": "2024-11-15T16:00:00",
-      "eta_end": "2024-11-15T16:30:00",
+      "type": "break",
+      "lat": 36.195,
+      "lng": -89.824,
+      "eta_start": "2026-10-18T16:00:00",
+      "eta_end": "2026-10-18T16:30:00",
       "duration_hrs": 0.5,
-      "label": "Joplin, MO",
+      "label": "Pemiscot Co., MO",
       "reason": "30-min break"
     }
   ],
   "daily_logs": [
     {
-      "date": "2024-11-15",
+      "date": "2026-10-18",
       "from_city": "Chicago, IL",
-      "to_city": "Joplin, MO",
-      "total_miles_driving": 921.0,
-      "total_hours": { "OFF_DUTY": 8.0, "SLEEPER": 0.0, "DRIVING": 11.0, "ON_DUTY_NOT_DRIVING": 5.0 },
-      "segments": [
-        {
-          "status": "DRIVING",
-          "start": "2024-11-15T08:00:00",
-          "end": "2024-11-15T19:00:00",
-          "location_label": "En route Chicago, IL to Dallas, TX",
-          "miles": 640.0,
-          "reason": "driving"
-        }
-      ]
+      "to_city": "Lonoke Co., AR",
+      "total_hours": 24.0,
+      "hours_per_status": {
+        "OFF_DUTY": 0.0,
+        "SLEEPER": 4.5,
+        "DRIVING": 11.0,
+        "ON_DUTY_NOT_DRIVING": 8.5
+      },
+      "segments": [...]
     }
   ],
   "timezone": "America/Chicago",
-  "assumptions": [ "..." ]
+  "assumptions": [...]
 }
 ```
 
-**Error responses:**
-
-| Code | When |
-|------|------|
-| `400` | Validation failure — body contains `{ "errors": { "field": "message" } }` |
-| `502` | Routing service unreachable |
-
 ---
 
-## HOS Logic (Engine Assumptions)
+## Running Tests
 
-The engine (`backend/hos_engine.py`) is a pure Python state machine. It receives naive datetimes already in the origin's home-terminal timezone and knows nothing about Django or HTTP.
-
-### Rules implemented (70 hr / 8-day property-carrying cycle)
-
-| Rule | Limit | Reset condition |
-|------|-------|-----------------|
-| **11-hour driving limit** | 11 h driving per shift | 10 consecutive hours off duty (SLEEPER) |
-| **14-hour duty window** | 14 h wall-clock from first on-duty | 10 consecutive hours off duty (SLEEPER). **Never pauses** for breaks |
-| **30-minute break** | Required after 8 cumulative driving hours | Any 30+ consecutive minutes of non-driving (fuel stops, pickup/dropoff all qualify) |
-| **70-hour cycle** | Cumulative on-duty hours ≤ 70 in a rolling 8-day window | 34 consecutive hours off duty (OFF_DUTY) |
-
-### Status codes
-
-| Status | Description |
-|--------|-------------|
-| `DRIVING` | Behind the wheel |
-| `ON_DUTY_NOT_DRIVING` | Pickup, dropoff, fuel stop |
-| `SLEEPER` | 10-hour mandatory rest |
-| `OFF_DUTY` | 34-hour cycle restart |
-
-### Conservative simplifications (documented by design)
-
-1. **No hours roll off during the trip.** `cycle_used_hrs` accumulates monotonically; past days' hours never expire mid-trip. This is conservative — the real 8-day rolling window would allow more driving.
-2. **Fresh shift at trip start.** The 11-hour and 14-hour clocks begin at the trip's first second. The driver is assumed to have had 10+ hours off before departure.
-3. **Fuel at 1,000-mile intervals.** Inserted as 30 minutes `ON_DUTY_NOT_DRIVING` whenever cumulative miles since the last fuel stop (or trip start) crosses 1,000 miles.
-
-### Trip order
-
+### Backend Tests (pytest)
+```bash
+cd backend
+pytest -v
 ```
-Current Location
-  └─ DRIVING ─→ Pickup (1 hr ON_DUTY_NOT_DRIVING)
-                  └─ DRIVING ─→ Dropoff (1 hr ON_DUTY_NOT_DRIVING)
+**27 tests passing** covering HOS regulatory logic, 11h/14h/30m/70h rules, midnight splitting, 34h cycle restarts, WSGI SECRET_KEY safety, Nominatim/Photon fallback, and API validation.
+
+### Frontend Tests (Vitest)
+```bash
+cd frontend
+npx vitest run
 ```
+**13 tests passing** covering log grid geometry, 15-minute boundary calculations, duty path SVG generation, and remarks deduplication.
 
-### Midnight splitting
-
-Every event is split at midnight in the **origin's home-terminal timezone** (resolved via `timezonefinder`; falls back to UTC). Each day's four duty-status totals must sum to exactly **24.00 hours**, with any unused time padded as `OFF_DUTY`.
-
----
-
-## Deployment
-
-### Backend → Render
-
-1. Push repo to GitHub.
-2. On Render, click **New → Blueprint** and point to this repo — Render reads `render.yaml` automatically.
-3. After the first deploy, note the service URL (e.g. `https://eld-trip-planner-api.onrender.com`).
-4. In the Render dashboard set:
-   - `CORS_ALLOWED_ORIGINS` = your Vercel URL
-   - `CSRF_TRUSTED_ORIGINS` = same value
-
-### Frontend → Vercel
-
-1. In your Vercel project settings, add the environment variable `VITE_API_URL` set to the Render service URL (no trailing slash) before the first build.
-2. On Vercel, **Add New Project** → import the GitHub repo.
-3. Set **Root Directory** to `frontend`.
-4. Build command: `npm run build`; Output directory: `dist`.
-5. Deploy.
-
-### Environment variable checklist
-
-| Platform | Variable | Required |
-|----------|----------|----------|
-| Render | `SECRET_KEY` | Auto-generated by blueprint |
-| Render | `DEBUG` | Set to `False` |
-| Render | `ALLOWED_HOSTS` | `.onrender.com` |
-| Render | `CORS_ALLOWED_ORIGINS` | Your Vercel URL |
-| Render | `CSRF_TRUSTED_ORIGINS` | Your Vercel URL |
-| Render | `ORS_API_KEY` | Optional; enables ORS routing |
-| Vercel | _(none)_ | All config in `vercel.json` |
-
----
-
-## Project Structure
-
+### Production Build
+```bash
+cd frontend
+npm run build
 ```
-eld-trip-planner/
-├── backend/
-│   ├── config/
-│   │   ├── settings.py        # Django settings (env-var driven)
-│   │   ├── urls.py            # Root URL conf
-│   │   └── wsgi.py
-│   ├── planner/
-│   │   ├── views.py           # GeocodeView, PlanTripView
-│   │   └── services.py        # Nominatim, OSRM/ORS, reverse-geocode, cache
-│   ├── hos_engine.py          # Pure-Python HOS state machine
-│   ├── test_hos_engine.py     # 9 pytest tests
-│   ├── test_api.py            # 12 pytest tests
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── pytest.ini
-├── frontend/
-│   ├── src/
-│   │   ├── App.jsx            # Two-tab shell
-│   │   ├── components/
-│   │   │   ├── TripForm.jsx       # Form with autocomplete + presets
-│   │   │   ├── LocationInput.jsx  # Debounced geocode search
-│   │   │   ├── MapView.jsx        # Leaflet map + markers
-│   │   │   ├── StopsTimeline.jsx  # Stop list with map sync
-│   │   │   ├── SummaryCards.jsx   # Top-line metrics
-│   │   │   ├── LogSheet.jsx       # FMCSA SVG daily log
-│   │   │   ├── LogViewer.jsx      # Multi-day tabs + PDF export
-│   │   │   └── AssumptionsPanel.jsx
-│   │   └── utils/
-│   │       ├── logGridGeometry.js      # SVG math + path generation
-│   │       └── logGridGeometry.test.js # 13 Vitest tests
-│   ├── vercel.json
-│   └── vite.config.js
-├── render.yaml
-├── .python-version            # 3.12.8
-├── .gitignore
-└── README.md
-```
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Backend framework | Django 6.1 + Django REST Framework |
-| WSGI server | Gunicorn |
-| Static files | WhiteNoise |
-| Geocoding | Nominatim (OSM) — 1 req/s, in-memory cache |
-| Routing | OSRM (public) or OpenRouteService (when key set) |
-| Timezone resolution | `timezonefinder` |
-| Frontend framework | React 19 + Vite 8 |
-| Styling | Tailwind CSS v4 |
-| Map | Leaflet + react-leaflet |
-| Log sheet | Pure SVG (responsive, print-ready) |
-| PDF export | jsPDF + html2canvas |
-| Frontend tests | Vitest 5 |
-| Backend tests | pytest + pytest-django |
-| CI/CD | Render Blueprint + Vercel GitHub integration |
 
 ---
 
 ## License
-
 MIT

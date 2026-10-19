@@ -102,7 +102,7 @@ function MapFlyController({ selectedStop }) {
   return null;
 }
 
-export default function MapView({ route, stops = [], selectedStop, onSelectStop }) {
+export default function MapView({ route, stops = [], selectedStop, onSelectStop, originLabel = 'Current Location' }) {
   const geojson = route?.geojson;
   const polylineLayerRef = useRef(null);
 
@@ -114,6 +114,9 @@ export default function MapView({ route, stops = [], selectedStop, onSelectStop 
     const latLngs = coords.map((coord) => [coord[1], coord[0]]);
     bounds = L.latLngBounds(latLngs);
   }
+
+  // First route coordinate for Origin marker: [lat, lng]
+  const originCoord = coords.length > 0 ? [coords[0][1], coords[0][0]] : null;
 
   return (
     <div className="relative w-full h-[460px] rounded-xl overflow-hidden border border-neutral-800 shadow-lg bg-neutral-950">
@@ -146,6 +149,27 @@ export default function MapView({ route, stops = [], selectedStop, onSelectStop 
               lineJoin: 'round',
             }}
           />
+        )}
+
+        {/* Origin Marker (Green 'A', at first route coordinate) */}
+        {originCoord && (
+          <Marker
+            position={originCoord}
+            icon={createCustomIcon('origin', 'A')}
+          >
+            <Popup className="custom-popup">
+              <div className="p-1 text-neutral-900 font-sans">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                    Origin
+                  </span>
+                </div>
+                <p className="font-bold text-sm text-neutral-900 leading-tight">
+                  Origin: {originLabel}
+                </p>
+              </div>
+            </Popup>
+          </Marker>
         )}
 
         {/* Stops Markers */}

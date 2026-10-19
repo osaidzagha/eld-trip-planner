@@ -24,6 +24,17 @@ export default function App() {
   const [devFixtureKey, setDevFixtureKey] = useState('chicago');
   const activeDevFixture = devFixtureKey === 'chicago' ? chicagoFixture : crossCountryFixture;
 
+  // Track if current result is the initial sample preview
+  const [isSampleResult, setIsSampleResult] = useState(true);
+
+  // Cold-start mitigation: on app mount, fire a silent GET /api/health/ to wake Render
+  React.useEffect(() => {
+    const apiBase = import.meta.env.VITE_API_URL || '';
+    fetch(`${apiBase}/api/health/`).catch(() => {
+      // Ignore errors silently - background wake-up ping only
+    });
+  }, []);
+
   // Cold-start helper: show "waking up" message after 5 s of loading
   const [showWakeUp, setShowWakeUp] = useState(false);
   const wakeUpTimerRef = React.useRef(null);
@@ -64,6 +75,7 @@ export default function App() {
 
       const data = await resp.json();
       setPlanResult(data);
+      setIsSampleResult(false);
     } catch (err) {
       if (err.name === 'AbortError') {
         setApiError('Request timed out after 90 seconds. The server may still be waking up — please try again.');
@@ -151,6 +163,19 @@ export default function App() {
         {/* ========================================================================= */}
         {activeTab === 'app' && (
           <>
+            {/* Sample result notice if showing default Chicago preview */}
+            {isSampleResult && (
+              <div className="bg-blue-950/60 border border-blue-800/80 text-blue-200 rounded-lg px-4 py-2.5 text-xs flex items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                  <span>
+                    <strong>Sample result:</strong> (Chicago -&gt; Dallas -&gt; Atlanta). Submit the form to plan your own trip.
+                  </span>
+                </div>
+                <span className="text-[11px] text-blue-300/80 font-mono hidden sm:inline">Preview Mode</span>
+              </div>
+            )}
+
             {/* Top High-Level Metrics Summary */}
             <SummaryCards planResult={planResult} />
 
@@ -164,18 +189,9 @@ export default function App() {
                   formErrors={formErrors}
                 />
                 {isLoading && showWakeUp && (
-                  <div className="bg-amber-950 border border-amber-800 text-amber-200 rounded-xl p-3 text-xs">
-                    Server is waking up, this can take up to a minute. Please keep this tab open.
-                  </div>
-                )}
-                {isLoading && showWakeUp && (
-                  <div className="bg-amber-950 border border-amber-800 text-amber-200 rounded-xl p-3 text-xs">
-                    Server is waking up, this can take up to a minute. Please keep this tab open.
-                  </div>
-                )}
-                {isLoading && showWakeUp && (
-                  <div className="bg-amber-950 border border-amber-800 text-amber-200 rounded-xl p-3 text-xs">
-                    Server is waking up, this can take up to a minute. Please keep this tab open.
+                  <div className="bg-amber-950 border border-amber-800 text-amber-200 rounded-xl p-3 text-xs flex items-center gap-2">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0 text-amber-400" />
+                    <span>Server is waking up, this can take up to a minute. Please keep this tab open.</span>
                   </div>
                 )}
                 <AssumptionsPanel assumptions={planResult?.assumptions} />
@@ -188,6 +204,7 @@ export default function App() {
                   stops={planResult?.stops}
                   selectedStop={selectedStop}
                   onSelectStop={setSelectedStop}
+                  originLabel={planResult?.daily_logs?.[0]?.from_city || planResult?.route?.legs?.[0]?.start_label || 'Current Location'}
                 />
                 <StopsTimeline
                   stops={planResult?.stops}

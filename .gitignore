@@ -46,13 +46,14 @@ Thumbs.db
 *.swp
 *.swo
 
-# Testing
+# Testing & Artifacts
 .pytest_cache/
 htmlcov/
 .coverage
 coverage.xml
+test_downloads/
+frontend/test_downloads/
 
-# Screenshots (large PNGs, committed manually)
+# Screenshots
 screenshots/*.png
 
-frontend/test_downloads/

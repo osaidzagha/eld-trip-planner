@@ -23,9 +23,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG = os.environ.get("DEBUG", "").strip() == "1"
 
 _secret_key_env = os.environ.get("SECRET_KEY", "").strip()
+_is_testing = (
+    "pytest" in sys.modules
+    or "test" in sys.argv
+    or any("pytest" in arg for arg in sys.argv)
+    or "PYTEST_CURRENT_TEST" in os.environ
+)
+_is_dev_command = any(
+    cmd in sys.argv
+    for cmd in ["runserver", "shell", "makemigrations", "migrate", "collectstatic"]
+)
 if not _secret_key_env:
-    if DEBUG:
-        # Development fallback — never used in production
+    if DEBUG or _is_testing or _is_dev_command:
+        # Development / test fallback — never used in production
         _secret_key_env = "django-insecure-dev-only-0yoma=w=5(x)e@@%zh=l#4ti"
     else:
         # Hard failure: do NOT start with a missing secret in production

@@ -401,3 +401,137 @@ def test_from_and_to_fields_in_daily_logs(client):
     assert "Chicago" in day1["from_city"]
 
 
+def test_health_endpoint(client):
+    """GET /api/health/ returns status: ok without DB or network dependencies."""
+    response = client.get("/api/health/")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_plan_trip_cycle_used_65_restart(client):
+    """
+    Requirement: cycle_used_hrs=65 on a 2,500-mile trip produces a 34-hour restart
+    (single stop of type 'restart' with duration 34.0) and every daily log still sums to 24.0.
+    """
+    mock_route_result = {
+        "geojson": {
+            "type": "Feature",
+            "geometry": {"type": "LineString", "coordinates": [[-118.25, 34.05], [-84.38, 33.74]]},
+            "properties": {"total_miles": 2500.0, "total_duration_hours": 41.5},
+        },
+        "total_miles": 2500.0,
+        "total_drive_hours": 41.5,
+        "legs": [
+            {
+                "name": "Current to Pickup",
+                "distance_miles": 150.0,
+                "duration_hours": 2.5,
+                "start_coords": (34.05, -118.25),
+                "end_coords": (34.89, -117.02),
+            },
+            {
+                "name": "Pickup to Dropoff",
+                "distance_miles": 2350.0,
+                "duration_hours": 39.0,
+                "start_coords": (34.89, -117.02),
+                "end_coords": (33.74, -84.38),
+            },
+        ],
+        "all_coordinates": [(34.05, -118.25), (34.89, -117.02), (33.74, -84.38)],
+    }
+
+    payload = {
+        "current": {"label": "Los Angeles, CA", "lat": 34.05, "lng": -118.25},
+        "pickup": {"label": "Barstow, CA", "lat": 34.89, "lng": -117.02},
+        "dropoff": {"label": "Atlanta, GA", "lat": 33.74, "lng": -84.38},
+        "cycle_used_hrs": 65.0,
+        "start_datetime": "2026-10-12T07:00:00",
+    }
+
+    with patch("planner.views.get_two_leg_route", return_value=mock_route_result):
+        response = client.post("/api/plan-trip/", data=payload, format="json")
+
+    assert response.status_code == 200
+    data = response.json()
+    stops = data["stops"]
+
+    # Must contain a restart stop with duration_hrs == 34.0
+    restart_stops = [s for s in stops if s["type"] == "restart"]
+    assert len(restart_stops) >= 1
+    assert restart_stops[0]["duration_hrs"] == 34.0
+
+    # Every daily log must sum to 24.0
+    assert len(data["daily_logs"]) >= 5
+    for log in data["daily_logs"]:
+        assert log["total_hours"] == pytest.approx(24.0, 0.01)
+
+
+def test_secret_key_fails_under_wsgi_without_env():
+    """Under WSGI / gunicorn with DEBUG unset and SECRET_KEY unset, startup must FAIL."""
+    import subprocess
+    import sys
+    import os
+
+    env = os.environ.copy()
+    env.pop("DEBUG", None)
+    env.pop("SECRET_KEY", None)
+    env.pop("PYTEST_CURRENT_TEST", None)
+
+    cmd = [sys.executable, "-c", "from config.wsgi import application"]
+    res = subprocess.run(cmd, env=env, capture_output=True, text=True, cwd=os.getcwd())
+    assert res.returncode != 0
+    assert "FATAL: SECRET_KEY environment variable is not set" in res.stderr
+
+
+def test_secret_key_fallback_only_dev_commands():
+    """SECRET_KEY local fallback applies only to dev/test commands (runserver, migrate, pytest, collectstatic)."""
+    import subprocess
+    import sys
+    import os
+
+    env = os.environ.copy()
+    env.pop("DEBUG", None)
+    env.pop("SECRET_KEY", None)
+    env.pop("PYTEST_CURRENT_TEST", None)
+
+    # Simulating runserver command line argument
+    cmd = [
+        sys.executable,
+        "-c",
+        "import sys; sys.argv = ['manage.py', 'runserver']; from config import settings; print(settings.SECRET_KEY)",
+    ]
+    res = subprocess.run(cmd, env=env, capture_output=True, text=True, cwd=os.getcwd())
+    assert res.returncode == 0
+    assert "django-insecure-dev-only" in res.stdout
+
+
+def test_geocode_fallback_to_photon():
+    """When Nominatim fails (HTTP error or exception), geocode_address falls back to Photon."""
+    from planner.services import geocode_address
+    mock_photon_response = MagicMock()
+    mock_photon_response.status_code = 200
+    mock_photon_response.json.return_value = {
+        "features": [
+            {
+                "geometry": {"coordinates": [-96.797, 32.776]},
+                "properties": {
+                    "name": "Dallas",
+                    "county": "Dallas County",
+                    "state": "Texas",
+                    "country": "United States",
+                },
+            }
+        ]
+    }
+
+    # First requests.get (Nominatim) raises exception, second (Photon) succeeds
+    with patch("requests.get", side_effect=[Exception("Nominatim blocked"), mock_photon_response]):
+        candidates = geocode_address("DallasTestUniqueQuery")
+        assert len(candidates) >= 1
+        assert candidates[0]["lat"] == 32.776
+        assert candidates[0]["lng"] == -96.797
+        assert "Dallas" in candidates[0]["label"]
+
+
+
+

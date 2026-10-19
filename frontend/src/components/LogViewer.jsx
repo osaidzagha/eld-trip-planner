@@ -34,8 +34,13 @@ export default function LogViewer({ dailyLogs = [] }) {
   const handleDownloadAllPDF = async () => {
     setIsExportingPdf(true);
     try {
-      const pdf = new jsPDF('landscape', 'pt', 'letter');
-      // Letter landscape: 792 x 612 pt
+      // Letter landscape: 792 x 612 pt with compression enabled
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'pt',
+        format: 'letter',
+        compress: true,
+      });
       const pdfWidth = 792;
       const pdfHeight = 612;
 
@@ -57,18 +62,38 @@ export default function LogViewer({ dailyLogs = [] }) {
             img.src = blobURL;
           });
 
+          // Render at ~1600px width with exact SVG aspect ratio (1000 x 580 = 1.724)
+          const targetWidth = 1600;
+          const targetHeight = Math.round(targetWidth * (580 / 1000)); // 928px
           const canvas = document.createElement('canvas');
-          canvas.width = 2000;
-          canvas.height = 1160;
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
           const ctx = canvas.getContext('2d');
           ctx.fillStyle = '#FFFFFF';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(blobURL);
 
-          const imgData = canvas.toDataURL('image/png');
+          // Render as JPEG with quality 0.92 for dramatically reduced file size
+          const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
           if (i > 0) pdf.addPage('letter', 'landscape');
-          // Scale to fit nicely with 20pt margin
-          pdf.addImage(imgData, 'PNG', 20, 20, 752, 436);
+
+          // Fit and center the sheet on the page keeping aspect ratio
+          // Page: 792 x 612 pt. Available printable area with 24pt margins: 744 x 564 pt
+          const maxW = 744;
+          const maxH = 564;
+          const imgAspect = targetWidth / targetHeight; // 1.724
+          let renderW = maxW;
+          let renderH = renderW / imgAspect; // ~431.5 pt
+          if (renderH > maxH) {
+            renderH = maxH;
+            renderW = renderH * imgAspect;
+          }
+          const posX = (pdfWidth - renderW) / 2;
+          const posY = (pdfHeight - renderH) / 2;
+
+          pdf.addImage(imgData, 'JPEG', posX, posY, renderW, renderH, undefined, 'FAST');
         }
       }
       pdf.save(`ELD_Daily_Logs_All_Days.pdf`);

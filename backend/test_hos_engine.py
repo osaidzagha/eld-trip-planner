@@ -404,3 +404,49 @@ def test_every_segment_has_required_attributes():
         assert isinstance(seg.location_label, str) and len(seg.location_label) > 0
         assert seg.miles >= 0.0
         assert isinstance(seg.reason, str) and len(seg.reason) > 0
+
+
+def test_cycle_used_65_restart_2500_mile_trip():
+    """
+    Requirement: cycle_used_hrs=65 on a 2,500-mile trip must produce a 34-hour restart
+    (single stop of type 'restart' with duration 34.0, status OFF_DUTY), and every daily log
+    must still sum to 24.0 hours.
+    """
+    start_time = datetime(2026, 10, 12, 7, 0, 0)
+    legs = [
+        TripLeg(
+            name="Current to Pickup",
+            start_label="Los Angeles, CA",
+            end_label="Barstow, CA",
+            distance_miles=150.0,
+            duration_hours=2.5,
+        ),
+        TripLeg(
+            name="Pickup to Dropoff",
+            start_label="Barstow, CA",
+            end_label="Atlanta, GA",
+            distance_miles=2350.0,
+            duration_hours=39.0,
+        ),
+    ]
+
+    segments, daily_logs, raw_segments = plan_trip_hos_raw(legs, cycle_used=65.0, start_time=start_time)
+
+    # Must produce a 34-hour restart in raw segments
+    raw_restarts = [s for s in raw_segments if s.reason == "34-hr restart"]
+    assert len(raw_restarts) >= 1
+    first_restart = raw_restarts[0]
+    assert first_restart.status == RESTART_STATUS_34HR  # OFF_DUTY
+    assert (first_restart.end - first_restart.start).total_seconds() / 3600.0 == pytest.approx(34.0, 0.01)
+
+    # In daily split segments, total duration of all restart slices must equal 34.0 hours
+    split_restarts = [s for s in segments if s.reason == "34-hr restart"]
+    assert sum(s.duration_hours for s in split_restarts) == pytest.approx(34.0, 0.01)
+
+    # Every daily log must sum to exactly 24.0 hours
+    assert len(daily_logs) >= 5
+    for i, log in enumerate(daily_logs):
+        assert log.total_hours == pytest.approx(24.0, 0.001), f"Day {i+1} ({log.date}) sum is {log.total_hours}"
+        status_sum = sum(log.hours_per_status.values())
+        assert status_sum == pytest.approx(24.0, 0.001), f"Day {i+1} ({log.date}) status sum is {status_sum}"
+

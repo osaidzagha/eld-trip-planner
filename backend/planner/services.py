@@ -78,12 +78,55 @@ def geocode_address(query: str, limit: int = 5) -> List[Dict[str, Any]]:
                 "lat": float(item["lat"]),
                 "lng": float(item["lon"]),
             })
-        # Cache for 24 hours
-        cache.set(cache_key, results, 86400)
-        return results
+        if results:
+            # Cache for 24 hours
+            cache.set(cache_key, results, 86400)
+            return results
     except Exception as exc:
         logger.warning(f"Nominatim geocode failed for query '{query}': {exc}")
-        return []
+
+    # Fallback provider: Photon (Komoot OSM search API)
+    try:
+        photon_url = "https://photon.komoot.io/api/"
+        p_resp = requests.get(
+            photon_url,
+            params={"q": query, "limit": limit},
+            headers={"User-Agent": NOMINATIM_USER_AGENT},
+            timeout=8,
+        )
+        p_resp.raise_for_status()
+        p_data = p_resp.json()
+        results = []
+        for feat in p_data.get("features", []):
+            coords = feat.get("geometry", {}).get("coordinates", [])
+            props = feat.get("properties", {})
+            if len(coords) >= 2:
+                parts = [
+                    props.get("name"),
+                    props.get("city"),
+                    props.get("county"),
+                    props.get("state"),
+                    props.get("country"),
+                ]
+                label_parts = [p for p in parts if p]
+                # Remove consecutive duplicates
+                clean_parts = []
+                for p in label_parts:
+                    if not clean_parts or clean_parts[-1] != p:
+                        clean_parts.append(p)
+                label = ", ".join(clean_parts) if clean_parts else query
+                results.append({
+                    "label": label,
+                    "lat": float(coords[1]),
+                    "lng": float(coords[0]),
+                })
+        if results:
+            cache.set(cache_key, results, 86400)
+            return results
+    except Exception as p_exc:
+        logger.warning(f"Photon fallback geocode failed for query '{query}': {p_exc}")
+
+    return []
 
 
 NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
