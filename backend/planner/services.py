@@ -37,7 +37,7 @@ ORS_DIRECTIONS_URL = "https://api.openrouteservice.org/v2/directions/driving-car
 _last_nominatim_call = 0.0
 
 
-def geocode_address(query: str, limit: int = 5) -> List[Dict[str, Any]]:
+def geocode_address_nominatim(query: str, limit: int = 5) -> List[Dict[str, Any]]:
     """
     Search Nominatim for matching addresses/cities.
     Caches results and strictly obeys rate limits.
@@ -489,3 +489,53 @@ def _fetch_route_ors(
         time.sleep(1.0)
 
     raise ConnectionError(f"Failed to fetch route from OpenRouteService after 2 attempts: {last_err}")
+
+def _photon_search(query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    """Photon (OSM) search. Unlike Nominatim it matches partial words ('dalla' -> Dallas)."""
+    cache_key = f"photon_{query.lower()}_{limit}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    resp = requests.get(
+        "https://photon.komoot.io/api/",
+        params={"q": query, "limit": limit * 2, "lang": "en"},
+        headers={"User-Agent": NOMINATIM_USER_AGENT},
+        timeout=5,
+    )
+    resp.raise_for_status()
+    results: List[Dict[str, Any]] = []
+    seen = set()
+    for feat in resp.json().get("features", []):
+        props = feat.get("properties", {})
+        lng, lat = feat["geometry"]["coordinates"][:2]
+        if props.get("type") in ("house", "street"):
+            continue
+        parts: List[str] = []
+        for key in ("name", "state", "country"):
+            val = props.get(key)
+            if val and val not in parts:
+                parts.append(val)
+        label = ", ".join(parts)
+        if not label or label in seen:
+            continue
+        seen.add(label)
+        results.append({"label": label, "lat": float(lat), "lng": float(lng)})
+        if len(results) >= limit:
+            break
+    if results:
+        cache.set(cache_key, results, 86400)
+    return results
+
+
+def geocode_address(query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    """Autocomplete search: Photon first (partial words), Nominatim as fallback."""
+    query = (query or "").strip()
+    if not query:
+        return []
+    try:
+        results = _photon_search(query, limit)
+        if results:
+            return results
+    except Exception as exc:
+        logger.warning(f"Photon search failed for '{query}': {exc}")
+    return geocode_address_nominatim(query, limit)

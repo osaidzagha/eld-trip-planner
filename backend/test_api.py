@@ -505,33 +505,39 @@ def test_secret_key_fallback_only_dev_commands():
     assert "django-insecure-dev-only" in res.stdout
 
 
-def test_geocode_fallback_to_photon():
-    """When Nominatim fails (HTTP error or exception), geocode_address falls back to Photon."""
+def test_geocode_falls_back_to_nominatim_when_photon_fails():
+    """Photon is the primary autocomplete provider; if it errors, Nominatim is used."""
+    from unittest.mock import MagicMock, patch
     from planner.services import geocode_address
-    mock_photon_response = MagicMock()
-    mock_photon_response.status_code = 200
-    mock_photon_response.json.return_value = {
-        "features": [
-            {
-                "geometry": {"coordinates": [-96.797, 32.776]},
-                "properties": {
-                    "name": "Dallas",
-                    "county": "Dallas County",
-                    "state": "Texas",
-                    "country": "United States",
-                },
-            }
-        ]
-    }
 
-    # First requests.get (Nominatim) raises exception, second (Photon) succeeds
-    with patch("requests.get", side_effect=[Exception("Nominatim blocked"), mock_photon_response]):
-        candidates = geocode_address("DallasTestUniqueQuery")
-        assert len(candidates) >= 1
-        assert candidates[0]["lat"] == 32.776
-        assert candidates[0]["lng"] == -96.797
-        assert "Dallas" in candidates[0]["label"]
+    nominatim_resp = MagicMock()
+    nominatim_resp.status_code = 200
+    nominatim_resp.json.return_value = [
+        {"display_name": "Dallas, Dallas County, Texas, United States", "lat": "32.776", "lon": "-96.797"}
+    ]
 
+    with patch("requests.get", side_effect=[Exception("Photon down"), nominatim_resp]):
+        candidates = geocode_address("DallasFallbackUniqueQuery")
 
+    assert len(candidates) >= 1
+    assert candidates[0]["label"].startswith("Dallas")
+    assert abs(candidates[0]["lat"] - 32.776) < 1e-6
+def test_geocode_prefers_photon_prefix_matches(monkeypatch):
+    from django.core.cache import cache
+    from planner import services
+    cache.clear()
 
+    class FakeResp:
+        status_code = 200
+        def raise_for_status(self):
+            pass
+        def json(self):
+            return {"features": [{
+                "geometry": {"coordinates": [-96.797, 32.7767]},
+                "properties": {"name": "Dallas", "state": "Texas", "country": "United States", "type": "city"},
+            }]}
 
+    monkeypatch.setattr(services.requests, "get", lambda *a, **k: FakeResp())
+    out = services.geocode_address("dalla", limit=5)
+    assert out and out[0]["label"] == "Dallas, Texas, United States"
+    assert abs(out[0]["lat"] - 32.7767) < 1e-6

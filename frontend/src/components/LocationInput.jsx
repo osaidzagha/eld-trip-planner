@@ -124,7 +124,7 @@ export default function LocationInput({
 
       {/* Autocomplete Dropdown */}
       {isOpen && candidates.length > 0 && (
-        <ul className="absolute z-50 left-0 right-0 mt-1.5 bg-neutral-850 border border-neutral-700 rounded-lg shadow-xl max-h-56 overflow-y-auto divide-y divide-neutral-800 text-xs text-white">
+        <ul className="absolute z-[2000] left-0 right-0 mt-1.5 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl max-h-56 overflow-y-auto divide-y divide-neutral-800 text-xs text-white">
           {candidates.map((cand, idx) => (
             <li
               key={idx}
